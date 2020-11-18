@@ -26,17 +26,24 @@ constructor(){
           Header:'Address',
           accessor:'address'
     }];
-    this.eventSource = new EventSource("http://localhost:5000/events");
+    this.eventSource = new EventSource("http://localhost:5001/events");
 
   }
 
+    componentDidUpdate(){
+        console.log("update state", this.state.data);
+    };
+
   componentDidMount() {
 
-      this.eventSource.addEventListener("dataUpdate", e =>
-      this.updateState(JSON.parse(e.data))
+      this.eventSource.addEventListener("dataUpdate", e => {
+              console.log("data event", e.data)
+              //this.updateState(JSON.parse(e.data))
+          this.updateState(this.state.data.concat(JSON.parse(e.data)))
+          }
     );
 
-  axios.get("http://localhost:5000/",
+  /*axios.get("http://localhost:5001/",
   {headers: {'Access-Control-Allow-Origin': '*'}
   })
       .then(
@@ -52,16 +59,20 @@ constructor(){
             error
           });
         }
-      )
+      )*/
   }
      updateState(newState) {
         console.log("Server side event recieved at",new Date())
         this.setState(Object.assign({}, { data: newState }));
+         //this.state.data.push(newState);
       }
   render() {
     return (
      <ReactTable data={this.state.data} columns={this.columns}/>
     )
+      /*return(
+          ""
+      )*/
 }
 }
 export default App;
