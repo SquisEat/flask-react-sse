@@ -36,7 +36,7 @@ constructor(){
 
   componentDidMount() {
 
-      this.eventSource.addEventListener("dataUpdate", e => {
+      this.eventSource.addEventListener("newOrder", e => {
               console.log("data event", e.data)
               //this.updateState(JSON.parse(e.data))
           this.updateState(this.state.data.concat(JSON.parse(e.data)))
