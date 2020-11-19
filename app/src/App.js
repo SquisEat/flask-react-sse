@@ -4,6 +4,20 @@ import axios from 'axios'
 import ReactTable from 'react-table'
 import 'react-table/react-table.css'
 
+function login(){
+    axios.get("http://localhost:5001/login",{auth:{
+            username:"foo",
+            password:"foo"
+        }})
+}
+
+function logout(){
+    axios.get("http://localhost:5001/logout",{auth:{
+            username:"foo",
+            password:"foo"
+        }})
+}
+
 class App extends React.Component {
 constructor(){
     super()
@@ -36,7 +50,7 @@ constructor(){
     };
 
   componentDidMount() {
-
+    login();
       this.eventSource.addEventListener("newOrder", e => {
               console.log("data event", e.data)
               //this.updateState(JSON.parse(e.data))
