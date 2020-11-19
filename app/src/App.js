@@ -26,7 +26,8 @@ constructor(){
           Header:'Address',
           accessor:'address'
     }];
-    this.eventSource = new EventSource("http://localhost:5001/events");
+    this.eventSource = new EventSource("http://localhost:5001/events?channel=supplierID_3",
+        {withCredentials: true});
 
   }
 
