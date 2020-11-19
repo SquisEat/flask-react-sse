@@ -62,7 +62,7 @@ constructor(){
       )*/
   }
      updateState(newState) {
-        console.log("Server side event recieved at",new Date())
+        console.log("Server side event received at",new Date());
         this.setState(Object.assign({}, { data: newState }));
          //this.state.data.push(newState);
       }

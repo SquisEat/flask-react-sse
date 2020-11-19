@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 import simplejson as json
 from flask_sse import sse
 import logging
@@ -20,19 +20,19 @@ h.setFormatter(fmt)
 log.addHandler(h)
 
 
-def server_side_event(scheduled=True):
+def server_side_event(scheduled=True, supplierID=None):
     """ Function to publish server side event """
     with app.app_context():
-        sse.publish(next(get_data()), type='dataUpdate')
+        sse.publish(next(get_data()), type='newOrder', channel=f"supplierID_{supplierID}")
         if scheduled:
-            print("Event Scheduled at ",datetime.datetime.now())
+            print("Event Scheduled at ", datetime.datetime.now())
         else:
-            print("Event triggered at ", datetime.datetime.now())
+            print(f"Event triggered for channel=supplierID_{supplierID} at ", datetime.datetime.now())
 
 
-sched = BackgroundScheduler(daemon=True)
-sched.add_job(server_side_event,'interval',seconds=get_schd_time())
-sched.start()
+# sched = BackgroundScheduler(daemon=True)
+# sched.add_job(server_side_event,'interval',seconds=get_schd_time())
+# sched.start()
 
 
 @app.route('/')
@@ -42,8 +42,10 @@ def index():
 
 @app.route('/send-data', methods=['POST'])
 def send_data():
-    server_side_event(scheduled=False)
-    return "", 200
+    data = request.get_json()
+    supplierID = data.get('supplierID')
+    server_side_event(scheduled=False, supplierID=supplierID)
+    return f"Sent event to {supplierID=}", 200
 
 
 if __name__ == '__main__':
