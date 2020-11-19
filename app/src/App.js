@@ -5,17 +5,14 @@ import ReactTable from 'react-table'
 import 'react-table/react-table.css'
 
 function login(){
-    axios.get("http://localhost:5001/login",{auth:{
-            username:"foo",
-            password:"foo"
-        }})
+    var bodyFormDate = new FormData();
+    bodyFormDate.append('username', 'user3');
+    bodyFormDate.append('password', 'password');
+    axios.post("http://localhost:5001/login?next=/", bodyFormDate);
 }
 
 function logout(){
-    axios.get("http://localhost:5001/logout",{auth:{
-            username:"foo",
-            password:"foo"
-        }})
+    axios.get("http://localhost:5001/logout")
 }
 
 class App extends React.Component {

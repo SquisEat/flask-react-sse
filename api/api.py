@@ -65,7 +65,7 @@ def server_side_event(scheduled=True, supplierID=None):
 def check_access():
     if not current_user.is_authenticated:
         abort(403)
-    if request.args.get('channel').replace('supplierID_') != current_user.id:
+    if request.args.get('channel').replace('supplierID_','') != str(current_user.id):
         abort(403)
 
 
