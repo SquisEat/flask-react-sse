@@ -9,11 +9,11 @@ from flask_login import current_user, LoginManager, UserMixin, login_required, l
 from helper import get_data, get_schd_time
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, support_credentials=True)
 app.config["REDIS_URL"] = "redis://localhost"
 app.register_blueprint(sse, url_prefix='/events')
-log = logging.getLogger('apscheduler.executors.default')
-log.setLevel(logging.INFO)
+log = app.logger
+log.setLevel(logging.DEBUG)
 fmt = logging.Formatter('%(levelname)s:%(name)s:%(message)s')
 h = logging.StreamHandler()
 h.setFormatter(fmt)
@@ -22,7 +22,10 @@ log.addHandler(h)
 # config
 app.config.update(
     DEBUG=True,
-    SECRET_KEY='secret_xxx'
+    SECRET_KEY='secret_xxx',
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_SAMESITE='None',
+    CORS_ORIGINS=['http://127.0.0.1:3000', 'http://localhost:3000']
 )
 
 # flask-login
@@ -44,13 +47,15 @@ class User(UserMixin):
 
 
 # create some users with ids 1 to 20
-users = [User(id) for id in range(1, 21)]
+users = [User(id) for id in range(1, 5)]
 
 
 def server_side_event(scheduled=True, supplierID=None):
     """ Function to publish server side event """
     with app.app_context():
-        sse.publish(next(get_data()), type='newOrder', channel=f"supplierID_{supplierID}")
+        channel = f"supplierID_{supplierID}"
+        print(channel)
+        sse.publish(next(get_data()), type='newOrder', channel=channel)
         if scheduled:
             print("Event Scheduled at ", datetime.datetime.now())
         else:
@@ -63,22 +68,26 @@ def server_side_event(scheduled=True, supplierID=None):
 
 @sse.before_request
 def check_access():
-    if not current_user.is_authenticated:
-        abort(403)
-    if request.args.get('channel').replace('supplierID_','') != str(current_user.id):
-        abort(403)
+    if request.path == "/events":
+        if current_user.is_anonymous:
+            abort(403)
+        channel = request.args.get('channel')
+        if not channel:
+            abort(403)
+        if channel.replace('supplierID_', '') != str(g.user.id):
+            abort(403)
 
 
 @app.route('/')
 def index():
-    return jsonify(next(get_data()))
+    if current_user.is_authenticated:
+        return jsonify(f"user authenticated = {current_user.name}")
+    return jsonify("User non authenticated")
 
 
 @app.route('/send-data', methods=['POST'])
 @login_required
 def send_data():
-    if not current_user.is_authenticated:
-        abort(401)
     supplierID = current_user.id
     server_side_event(scheduled=False, supplierID=supplierID)
     return f"Sent event to {supplierID=}", 200
@@ -87,12 +96,14 @@ def send_data():
 # somewhere to login
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    global users
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         if password == "password":
             id = str(username).replace("user", "")
             user = User(id)
+            assert user in users
             login_user(user)
             return redirect(request.args.get("next"))
         else:
@@ -116,15 +127,19 @@ def logout():
 
 
 # handle login failed
-@app.errorhandler(401)
-def page_not_found(e):
-    return Response('<p>Login failed</p>')
+@login_manager.unauthorized_handler
+def page_not_found():
+    return Response('<p>Login failed</p>', status=401)
 
 
 # callback to reload the user object
 @login_manager.user_loader
 def load_user(userid):
-    return User(userid)
+    if userid is not None:
+        user = User(userid)
+        if user in users:
+            return user
+    return None
 
 
 if __name__ == '__main__':

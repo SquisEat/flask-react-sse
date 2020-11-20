@@ -8,11 +8,11 @@ function login(){
     var bodyFormDate = new FormData();
     bodyFormDate.append('username', 'user3');
     bodyFormDate.append('password', 'password');
-    axios.post("http://localhost:5001/login?next=/", bodyFormDate);
+    axios.post("http://127.0.0.1:5001/login?next=/", bodyFormDate);
 }
 
 function logout(){
-    axios.get("http://localhost:5001/logout")
+    axios.get("http://127.0.0.1:5001/logout");
 }
 
 class App extends React.Component {
@@ -37,9 +37,8 @@ constructor(){
           Header:'Address',
           accessor:'address'
     }];
-    this.eventSource = new EventSource("http://localhost:5001/events?channel=supplierID_3",
-        {withCredentials: true});
-
+      //login();
+    this.eventSource = new EventSource("http://127.0.0.1:5001/events?channel=supplierID_3");
   }
 
     componentDidUpdate(){
@@ -47,7 +46,7 @@ constructor(){
     };
 
   componentDidMount() {
-    login();
+    //login();
       this.eventSource.addEventListener("newOrder", e => {
               console.log("data event", e.data)
               //this.updateState(JSON.parse(e.data))
@@ -80,8 +79,13 @@ constructor(){
       }
   render() {
     return (
+    <>
      <ReactTable data={this.state.data} columns={this.columns}/>
+        <button style={{backgroundColor: "blue", padding: "1rem 2rem", color:"white"}} onClick={()=>login()}> Login </button>
+        <button style={{backgroundColor: "red", padding: "1rem 2rem", color:"white"}} onClick={()=>logout()} > Logout </button>
+            </>
     )
+
       /*return(
           ""
       )*/
