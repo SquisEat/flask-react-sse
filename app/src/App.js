@@ -8,7 +8,8 @@ function login(){
     var bodyFormDate = new FormData();
     bodyFormDate.append('username', 'user3');
     bodyFormDate.append('password', 'password');
-    axios.post("http://127.0.0.1:5001/login?next=/", bodyFormDate);
+    axios.post("http://127.0.0.1:5001/login?next=/", bodyFormDate,
+        {headers: { withCredentials: true}});
 }
 
 function logout(){

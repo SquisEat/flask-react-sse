@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request, abort, g, Response, redirect
 import simplejson as json
-from flask_sse import sse
+from flask_sse import sse, ServerSentEventsBlueprint
 import logging
 from flask_cors import CORS
 import datetime
@@ -11,7 +11,7 @@ from helper import get_data, get_schd_time
 app = Flask(__name__)
 CORS(app, support_credentials=True)
 app.config["REDIS_URL"] = "redis://localhost"
-app.register_blueprint(sse, url_prefix='/events')
+
 log = app.logger
 log.setLevel(logging.DEBUG)
 fmt = logging.Formatter('%(levelname)s:%(name)s:%(message)s')
@@ -33,6 +33,7 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
+app.register_blueprint(sse, url_prefix='/events')
 
 # silly user model
 class User(UserMixin):
@@ -66,15 +67,15 @@ def server_side_event(scheduled=True, supplierID=None):
 # sched.add_job(server_side_event,'interval',seconds=get_schd_time())
 # sched.start()
 
-@sse.before_request
-def check_access():
+@app.before_request
+def before_request():
     if request.path == "/events":
         if current_user.is_anonymous:
             abort(403)
         channel = request.args.get('channel')
         if not channel:
             abort(403)
-        if channel.replace('supplierID_', '') != str(g.user.id):
+        if channel.replace('supplierID_', '') != str(current_user.id):
             abort(403)
 
 
@@ -104,7 +105,7 @@ def login():
             id = str(username).replace("user", "")
             user = User(id)
             assert user in users
-            login_user(user)
+            login_user(user, remember=True)
             return redirect(request.args.get("next"))
         else:
             return abort(401)
