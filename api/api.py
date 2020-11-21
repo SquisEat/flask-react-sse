@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request, abort, g, Response, redirect
 import simplejson as json
-from flask_sse import sse, ServerSentEventsBlueprint
+from flask_sse import sse
 import logging
 from flask_cors import CORS
 import datetime
@@ -33,7 +33,20 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
-app.register_blueprint(sse, url_prefix='/events')
+
+@sse.before_request
+def before_request():
+    if current_user.is_anonymous:
+        abort(403)
+    channel = request.args.get('channel')
+    if not channel:
+        abort(404)
+    if channel.replace('supplierID_', '') != str(current_user.id):
+        abort(403)
+
+
+app.register_blueprint(sse, url_prefix="/events")
+
 
 # silly user model
 class User(UserMixin):
@@ -51,34 +64,6 @@ class User(UserMixin):
 users = [User(id) for id in range(1, 5)]
 
 
-def server_side_event(scheduled=True, supplierID=None):
-    """ Function to publish server side event """
-    with app.app_context():
-        channel = f"supplierID_{supplierID}"
-        print(channel)
-        sse.publish(next(get_data()), type='newOrder', channel=channel)
-        if scheduled:
-            print("Event Scheduled at ", datetime.datetime.now())
-        else:
-            print(f"Event triggered for channel=supplierID_{supplierID} at ", datetime.datetime.now())
-
-
-# sched = BackgroundScheduler(daemon=True)
-# sched.add_job(server_side_event,'interval',seconds=get_schd_time())
-# sched.start()
-
-@app.before_request
-def before_request():
-    if request.path == "/events":
-        if current_user.is_anonymous:
-            abort(403)
-        channel = request.args.get('channel')
-        if not channel:
-            abort(403)
-        if channel.replace('supplierID_', '') != str(current_user.id):
-            abort(403)
-
-
 @app.route('/')
 def index():
     if current_user.is_authenticated:
@@ -90,6 +75,7 @@ def index():
 @login_required
 def send_data():
     supplierID = current_user.id
+    from server_side_event import server_side_event
     server_side_event(scheduled=False, supplierID=supplierID)
     return f"Sent event to {supplierID=}", 200
 
@@ -144,4 +130,4 @@ def load_user(userid):
 
 
 if __name__ == '__main__':
-   app.run(debug=True, port=5001)
+    app.run(debug=True, port=5001)
