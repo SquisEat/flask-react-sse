@@ -1,3 +1,7 @@
+import os
+import random
+import sys
+
 from flask import Flask, jsonify, request, abort, g, Response, redirect
 import simplejson as json
 from flask_sse import sse
@@ -6,7 +10,8 @@ from flask_cors import CORS
 import datetime
 from flask_login import current_user, LoginManager, UserMixin, login_required, logout_user, login_user
 
-from helper import get_data, get_schd_time
+sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
+
 
 app = Flask(__name__)
 CORS(app, support_credentials=True)
@@ -34,17 +39,6 @@ login_manager.init_app(app)
 login_manager.login_view = "login"
 
 
-@sse.before_request
-def before_request():
-    if current_user.is_anonymous:
-        abort(403)
-    channel = request.args.get('channel')
-    if not channel:
-        abort(404)
-    if channel.replace('supplierID_', '') != str(current_user.id):
-        abort(403)
-
-
 app.register_blueprint(sse, url_prefix="/events")
 
 
@@ -61,7 +55,7 @@ class User(UserMixin):
 
 
 # create some users with ids 1 to 20
-users = [User(id) for id in range(1, 5)]
+users = [User(id) for id in range(1, 20)]
 
 
 @app.route('/')
@@ -72,12 +66,13 @@ def index():
 
 
 @app.route('/send-data', methods=['POST'])
-@login_required
 def send_data():
-    supplierID = current_user.id
+    supplierID = random.choice(users).id
+    # supplierID = 1
     from server_side_event import server_side_event
-    server_side_event(scheduled=False, supplierID=supplierID)
-    return f"Sent event to {supplierID=}", 200
+    from helper import get_data
+    server_side_event(supplierID=supplierID, data=next(get_data()))
+    return f"Sent event to supplierID={supplierID}", 200
 
 
 # somewhere to login
@@ -130,4 +125,4 @@ def load_user(userid):
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    app.run(debug=True, port=5000)
